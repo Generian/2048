@@ -79,6 +79,10 @@ function indexToVec(index) {
   return pos;
 }
 
+function arrayMove(array, from, to) {
+  array.splice(to, 0, array.splice(from, 1)[0]);
+};
+
 class Card extends React.Component {
 
   indexToStyle(index) {
@@ -123,23 +127,11 @@ class Game extends React.Component {
     }
   }
 
-  @keydown( KEYS ) // or specify `which` code directly, in this case 13
+  @keydown( KEYS )
   submit( event ) {
-    // do something, or not, with the keydown event, maybe event.preventDefault()
-    if (event.key === "w") {
-      this.moveUp();
-      //this.printBoard();
-      this.add();
-    } else if (event.key === "a") {
-      //moveLeft();
-      //this.printBoard();
-    } else if (event.key === "s") {
-      //moveDown();
-      //this.printBoard();
-    } else if (event.key === "d") {
-      //moveRight();
-      //this.printBoard();
-    }
+    this.arrangeCards(event.key);
+    //this.move(event.key);
+    this.add();
   }
 
   printBoard() {
@@ -179,6 +171,149 @@ class Game extends React.Component {
     return 2;
   }
 
+  updateIndex(oldIndex, newIndex) {
+    let newCards = this.state.cards;
+    for (let i = 0; i < newCards.length; i++) {
+      if (newCards[i].index === oldIndex) {
+        newCards[i].index = newIndex;
+      }
+    }
+    for (let i = 0; i < 16; i++) {
+      board[i+1] = null;
+    }
+    for (let i = 0; i < newCards.length; i++) {
+      let c = newCards[i];
+      board[c.index] = c.val;
+    }
+    this.setState({
+      cards: newCards
+    });
+  }
+
+  // updateVal(index) {
+  //   let newCards = this.state.cards;
+  //   for (let i = 0; i < newCards.length; i++) {
+  //     if (newCards[i].index === oldIndex) {
+  //       newCards[i].val = 2 * newCards[i].val;
+  //     }
+  //   }
+  //   for (let i = 0; i < 16; i++) {
+  //     board[i+1] = null;
+  //   }
+  //   for (let i = 0; i < newCards.length; i++) {
+  //     let c = newCards[i];
+  //     board[c.index] = c.val;
+  //   }
+  //   this.setState({
+  //     cards: newCards
+  //   });
+  // }
+
+
+
+  arrangeCards(dir) {
+    let newCards = this.state.cards;
+    switch (dir) {
+      case 'w':
+        for (let i = 1; i <= 4; i++) {
+          for (let j = 0; j < newCards.length; j++) {
+            if (indexToVec(newCards[j].index).row == i) {
+              this.move(dir);
+            }
+          }
+        }
+        break;
+      case 's':
+        for (let i = 4; i > 0; i--) {
+          newCards.push(this.state.cards.filter(c => indexToVec(c).row === i));
+        }
+        break;
+      case 'a':
+        for (let i = 0; i < 4; i++) {
+          newCards.push(this.state.cards.filter(c => indexToVec(c).col === i + 1));
+        }
+        break;
+      case 'd':
+        for (let i = 4; i > 0; i--) {
+          newCards.push(this.state.cards.filter(c => indexToVec(c).col === i));
+        }
+        break;
+      default:
+        //newCards = this.state.cards;
+    }
+    // for (let i = 0; i < newCards.length; i++) {
+    //   console.log(newCards[i].index);
+    // };
+    this.setState({
+      cards: newCards
+    });
+  }
+
+  move(dir) {
+    //this.arrangeCards(dir);
+    for (let i = 0; i < this.state.cards.length; i++) {
+      let cards = this.state.cards;
+      let newCards = [];
+      let c = cards[i];
+      let pos = indexToVec(c.index);
+      switch (dir) {
+        case 'w':
+          if (pos.row !== 1) {
+            pos.row -= 1;
+            let newIndex = vecToIndex(pos);
+            if (this.checkIfFree(newIndex)) {
+              this.updateIndex(c.index, newIndex);
+            } else {
+              if (this.checkIfSame(newIndex, c.val)) {
+                this.updateVal(newIndex);
+              }
+            }
+          }
+          break;
+        case 's':
+          if (pos.row !== 4) {
+            pos.row += 1;
+            let newIndex = vecToIndex(pos);
+            if (this.checkIfFree(newIndex)) {
+              this.updateIndex(c.index, newIndex);
+            } else {
+              if (this.checkIfSame(newIndex, c.val)) {
+                this.updateVal(newIndex);
+              }
+            }
+          }
+          break;
+        case 'a':
+          if (pos.col !== 1) {
+            pos.col -= 1;
+            let newIndex = vecToIndex(pos);
+            if (this.checkIfFree(newIndex)) {
+              this.updateIndex(c.index, newIndex);
+            } else {
+              if (this.checkIfSame(newIndex, c.val)) {
+                this.updateVal(newIndex);
+              }
+            }
+          }
+          break;
+        case 'd':
+          if (pos.col !== 4) {
+            pos.col += 1;
+            let newIndex = vecToIndex(pos);
+            if (this.checkIfFree(newIndex)) {
+              this.updateIndex(c.index, newIndex);
+            } else {
+              if (this.checkIfSame(newIndex, c.val)) {
+                this.updateVal(newIndex);
+              }
+            }
+          }
+          break;
+        default:
+      }
+    }
+  }
+
   moveUp() {
     let cards = this.state.cards;
     let newCards = [];
@@ -193,7 +328,7 @@ class Game extends React.Component {
           newCards.push(c);
         } else {
           if (this.checkIfSame(newIndex, c.val)) {
-            console.log('same!');
+            this.updateVal(newIndex);
           } else {
             newCards.push(c)
           }
@@ -208,6 +343,21 @@ class Game extends React.Component {
     for (let i = 0; i < this.state.cards.length; i++) {
       let c = this.state.cards[i];
       board[c.index] = c.val;
+    }
+    this.setState({
+      cards: newCards
+    });
+  }
+
+  updateVal(index) {
+    let target = this.state.cards.find(x => x.index === index);
+    let newCards = this.state.cards
+    let newVal = 2 * target.val;
+    board[index] = newVal;
+    for (let i = 0; i < newCards.length; i++) {
+      if (newCards[i].index === index) {
+        newCards[i].val = newVal;
+      }
     }
     this.setState({
       cards: newCards
@@ -234,7 +384,7 @@ class Game extends React.Component {
     let c = this.state.cards;
     let pos = this.randomPos();
     this.state.board[pos] = 2;
-    console.log(indexToVec(pos));
+    //console.log(indexToVec(pos));
     c.push(new Tile(pos, this.randomVal()));
     this.setState({
       cards: c
@@ -259,7 +409,7 @@ class Game extends React.Component {
 
 // ========================================
 
-console.log(board);
+//console.log(board);
 var back = [];
 for (let i = 0; i < 16; i++) {
   back.push(<Card index={i+1} bg={true}/>);
